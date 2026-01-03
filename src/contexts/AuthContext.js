@@ -1,9 +1,9 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
+import { authAPI } from '../services/api';
 
-// Create the context
 const AuthContext = createContext();
 
-// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -12,70 +12,132 @@ export const useAuth = () => {
   return context;
 };
 
-// Auth Provider component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authToken, setAuthToken] = useState(localStorage.getItem('mkulimasoko_token'));
 
-  // Mock authentication functions
-  const login = async (credentials) => {
-    setLoading(true);
+  // Check if token exists and validate it on mount
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const token = localStorage.getItem('mkulimasoko_token');
+      if (token) {
+        try {
+          // Verify token with backend
+          const response = await authAPI.verifyToken(token);
+          if (response.data.valid) {
+            setUser(response.data.user);
+            setIsAuthenticated(true);
+          } else {
+            localStorage.removeItem('mkulimasoko_token');
+          }
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          localStorage.removeItem('mkulimasoko_token');
+        }
+      }
+      setLoading(false);
+    };
+
+    checkAuthStatus();
+  }, []);
+
+  // Login function
+  const login = async (email, password) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const mockUser = {
-        id: 1,
-        name: 'Test User',
-        email: credentials.email,
-        userType: 'farmer'
-      };
-      setUser(mockUser);
-      localStorage.setItem('mkulimasoko_token', 'mock-token');
-      localStorage.setItem('mkulimasoko_user', JSON.stringify(mockUser));
-      return { success: true, user: mockUser };
-    } catch (err) {
-      setError(err.message);
-      throw err;
+      setLoading(true);
+      const response = await authAPI.login({ email, password });
+      
+      const { token, user } = response.data;
+      
+      // Store token and user data
+      localStorage.setItem('mkulimasoko_token', token);
+      localStorage.setItem('mkulimasoko_user', JSON.stringify(user));
+      
+      // Update state
+      setAuthToken(token);
+      setUser(user);
+      setIsAuthenticated(true);
+      
+      toast.success('Login successful!');
+      return { success: true, user };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      toast.error(message);
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }
   };
 
+  // Register function
   const register = async (userData) => {
-    setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true, message: 'Registration successful' };
-    } catch (err) {
-      setError(err.message);
-      throw err;
+      setLoading(true);
+      const response = await authAPI.register(userData);
+      
+      const { token, user } = response.data;
+      
+      // Store token and user data
+      localStorage.setItem('mkulimasoko_token', token);
+      localStorage.setItem('mkulimasoko_user', JSON.stringify(user));
+      
+      // Update state
+      setAuthToken(token);
+      setUser(user);
+      setIsAuthenticated(true);
+      
+      toast.success('Registration successful!');
+      return { success: true, user };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      toast.error(message);
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
+  // Logout function
+  const logout = useCallback(() => {
     localStorage.removeItem('mkulimasoko_token');
     localStorage.removeItem('mkulimasoko_user');
+    setAuthToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
+    toast.info('Logged out successfully');
+  }, []);
+
+  // Update user profile
+  const updateUser = (updatedUser) => {
+    const currentUser = JSON.parse(localStorage.getItem('mkulimasoko_user') || '{}');
+    const mergedUser = { ...currentUser, ...updatedUser };
+    localStorage.setItem('mkulimasoko_user', JSON.stringify(mergedUser));
+    setUser(mergedUser);
   };
 
-  const clearError = () => setError(null);
+  // Check if user has specific role
+  const hasRole = (role) => {
+    return user?.roles?.includes(role) || user?.role === role;
+  };
 
-  const isAuthenticated = () => {
-    return !!localStorage.getItem('mkulimasoko_token');
+  // Check if user has any of the specified roles
+  const hasAnyRole = (roles) => {
+    return roles.some(role => hasRole(role));
   };
 
   const value = {
     user,
     loading,
-    error,
+    isAuthenticated,
+    authToken,
     login,
     register,
     logout,
-    clearError,
-    isAuthenticated: isAuthenticated()
+    updateUser,
+    hasRole,
+    hasAnyRole
   };
 
   return (
@@ -84,5 +146,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-export default AuthContext;

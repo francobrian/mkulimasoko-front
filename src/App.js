@@ -1,135 +1,134 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import ProtectedRoute from './components/common/ProtectedRoute';
-import Navbar from './components/common/Navbar';
+import { ToastContainer } from 'react-toastify';
+import { HelmetProvider } from 'react-helmet-async';
+
+// Context Providers
+import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
+import { ProductsProvider } from './contexts/ProductsContext';
+
+// Layout Components
+import Header from './components/common/Header';
 import Footer from './components/common/Footer';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import FarmerDashboard from './pages/FarmerDashboard';
-import ConsumerDashboard from './pages/ConsumerDashboard';
-import Marketplace from './pages/Marketplace';
-import Farms from './pages/Farms';
-import './App.css';
+import ScrollToTop from './components/common/ScrollToTop';
+import LoadingSpinner from './components/common/LoadingSpinner';
 
-// Layout component for pages with navbar and footer
-const Layout = ({ children }) => {
-  return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
-      <main className="flex-grow">
-        {children}
-      </main>
-      <Footer />
-    </div>
-  );
-};
+// Page Components
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetailsPage from './pages/ProductDetailsPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import FarmersDashboardPage from './pages/FarmersDashboardPage';
+import BuyerDashboardPage from './pages/BuyerDashboardPage';
+import OrdersPage from './pages/OrdersPage';
+import ProfilePage from './pages/ProfilePage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
+import NotFoundPage from './pages/NotFoundPage';
 
-// Dashboard selector based on user type
-const UserDashboard = () => {
-  const { user } = useAuth();
-  
-  if (user?.userType === 'farmer') {
-    return <FarmerDashboard />;
-  } else {
-    return <ConsumerDashboard />;
-  }
-};
+// Protected Route Component
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
-// Main app content with routing
-const AppContent = () => {
-  return (
-    <Routes>
-      {/* Public routes without navbar/footer */}
-      <Route 
-        path="/login" 
-        element={
-          <ProtectedRoute requireAuth={false}>
-            <Login />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/register" 
-        element={
-          <ProtectedRoute requireAuth={false}>
-            <Register />
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Protected routes with navbar/footer */}
-      <Route 
-        path="/dashboard" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <UserDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/marketplace" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Marketplace />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/farms" 
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Farms />
-            </Layout>
-          </ProtectedRoute>
-        } 
-      />
-      
-      {/* Home route redirects to dashboard */}
-      <Route 
-        path="/" 
-        element={<Navigate to="/dashboard" replace />} 
-      />
-      
-      {/* 404 page */}
-      <Route 
-        path="*" 
-        element={
-          <Layout>
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
-              <div className="text-center">
-                <h1 className="text-6xl font-bold text-primary-600 mb-4">404</h1>
-                <p className="text-xl text-gray-600 mb-8">Page not found</p>
-                <a 
-                  href="/" 
-                  className="btn-primary text-lg px-6 py-3"
-                >
-                  Return to Dashboard
-                </a>
-              </div>
-            </div>
-          </Layout>
-        } 
-      />
-    </Routes>
-  );
-};
+// CSS
+import './assets/styles/App.css';
 
-// Main App component
 function App() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate initial loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return <LoadingSpinner fullPage />;
+  }
+
   return (
-    <Router>
+    <HelmetProvider>
       <AuthProvider>
-        <div className="App">
-          <AppContent />
-        </div>
+        <ProductsProvider>
+          <CartProvider>
+            <Router>
+              <div className="App">
+                <Header />
+                <main className="main-content">
+                  <ScrollToTop />
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/products/:category" element={<ProductsPage />} />
+                    <Route path="/product/:id" element={<ProductDetailsPage />} />
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/contact" element={<ContactPage />} />
+
+                    {/* Protected Routes */}
+                    <Route path="/cart" element={
+                      <ProtectedRoute>
+                        <CartPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/checkout" element={
+                      <ProtectedRoute>
+                        <CheckoutPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/farmer-dashboard" element={
+                      <ProtectedRoute allowedRoles={['farmer', 'admin']}>
+                        <FarmersDashboardPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/buyer-dashboard" element={
+                      <ProtectedRoute allowedRoles={['buyer', 'admin']}>
+                        <BuyerDashboardPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/orders" element={
+                      <ProtectedRoute>
+                        <OrdersPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/profile" element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    } />
+
+                    {/* 404 Page */}
+                    <Route path="/404" element={<NotFoundPage />} />
+                    <Route path="*" element={<Navigate to="/404" replace />} />
+                  </Routes>
+                </main>
+                <Footer />
+                <ToastContainer
+                  position="top-right"
+                  autoClose={5000}
+                  hideProgressBar={false}
+                  newestOnTop
+                  closeOnClick
+                  rtl={false}
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                  theme="colored"
+                />
+              </div>
+            </Router>
+          </CartProvider>
+        </ProductsProvider>
       </AuthProvider>
-    </Router>
+    </HelmetProvider>
   );
 }
 

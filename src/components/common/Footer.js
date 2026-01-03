@@ -1,65 +1,78 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaMapMarkerAlt, FaPhone, FaEnvelope } from 'react-icons/fa';
+import './Footer.css';
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-gray-800 text-white">
-      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
-        <div className="xl:grid xl:grid-cols-3 xl:gap-8">
-          <div className="space-y-8 xl:col-span-1">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center mr-3">
-                <span className="text-white font-bold text-lg">M</span>
+    <footer className="footer">
+      <div className="footer-top">
+        <div className="container">
+          <div className="footer-grid">
+            <div className="footer-column">
+              <div className="footer-logo">
+                <h2>MkulimaSoko</h2>
+                <p>Connecting farmers directly to consumers</p>
               </div>
-              <span className="text-xl font-bold">MkulimaSoko</span>
+              <div className="footer-contact">
+                <p><FaMapMarkerAlt /> 123 Farm Road, Nairobi, Kenya</p>
+                <p><FaPhone /> +254 712 345 678</p>
+                <p><FaEnvelope /> info@mkulimasoko.com</p>
+              </div>
+              <div className="footer-social">
+                <a href="https://facebook.com/mkulimasoko" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><FaFacebook /></a>
+                <a href="https://twitter.com/mkulimasoko" aria-label="Twitter" target="_blank" rel="noopener noreferrer"><FaTwitter /></a>
+                <a href="https://instagram.com/mkulimasoko" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
+                <a href="https://linkedin.com/company/mkulimasoko" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer"><FaLinkedin /></a>
+              </div>
             </div>
-            <p className="text-gray-300 text-base">
-              Connecting farmers directly with consumers. Fresh produce, fair prices, and a sustainable future for agriculture.
-            </p>
-          </div>
-          <div className="mt-12 grid grid-cols-2 gap-8 xl:mt-0 xl:col-span-2">
-            <div className="md:grid md:grid-cols-2 md:gap-8">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-300 tracking-wider uppercase">
-                  Marketplace
-                </h3>
-                <ul className="mt-4 space-y-4">
-                  <li>
-                    <Link to="/marketplace" className="text-base text-gray-300 hover:text-white">
-                      Browse Products
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/farms" className="text-base text-gray-300 hover:text-white">
-                      Find Farms
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div className="mt-12 md:mt-0">
-                <h3 className="text-sm font-semibold text-gray-300 tracking-wider uppercase">
-                  Support
-                </h3>
-                <ul className="mt-4 space-y-4">
-                  <li>
-                    <a href="#" className="text-base text-gray-300 hover:text-white">
-                      Help Center
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#" className="text-base text-gray-300 hover:text-white">
-                      Contact Us
-                    </a>
-                  </li>
-                </ul>
-              </div>
+
+            <div className="footer-column">
+              <h3>Quick Links</h3>
+              <ul>
+                <li><Link to="/">Home</Link></li>
+                <li><Link to="/products">Products</Link></li>
+                <li><Link to="/farmers">Farmers</Link></li>
+                <li><Link to="/about">About Us</Link></li>
+                <li><Link to="/contact">Contact</Link></li>
+              </ul>
+            </div>
+
+            <div className="footer-column">
+              <h3>Categories</h3>
+              <ul>
+                <li><Link to="/products/vegetables">Vegetables</Link></li>
+                <li><Link to="/products/fruits">Fruits</Link></li>
+                <li><Link to="/products/dairy">Dairy Products</Link></li>
+                <li><Link to="/products/grains">Grains & Cereals</Link></li>
+                <li><Link to="/products/meat">Meat & Poultry</Link></li>
+              </ul>
+            </div>
+
+            <div className="footer-column">
+              <h3>Subscribe</h3>
+              <p>Subscribe to our newsletter for updates</p>
+              <form className="newsletter-form">
+                <input type="email" placeholder="Your email address" />
+                <button type="submit">Subscribe</button>
+              </form>
             </div>
           </div>
         </div>
-        <div className="mt-12 border-t border-gray-700 pt-8">
-          <p className="text-base text-gray-400 xl:text-center">
-            &copy; {new Date().getFullYear()} MkulimaSoko. All rights reserved.
-          </p>
+      </div>
+
+      <div className="footer-bottom">
+        <div className="container">
+          <div className="footer-bottom-content">
+            <p>&copy; {currentYear} MkulimaSoko. All rights reserved.</p>
+            <div className="footer-links">
+              <Link to="/privacy">Privacy Policy</Link>
+              <Link to="/terms">Terms of Service</Link>
+              <Link to="/sitemap">Sitemap</Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

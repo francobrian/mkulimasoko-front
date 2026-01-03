@@ -1,20 +1,16 @@
 import React from 'react';
+import './LoadingSpinner.css';
 
-const LoadingSpinner = ({ size = 'medium', text = 'Loading...', className = '' }) => {
-  const sizeClasses = {
-    small: 'h-6 w-6',
-    medium: 'h-12 w-12',
-    large: 'h-16 w-16'
-  };
+const LoadingSpinner = ({ fullPage = false, size = 'medium', text = 'Loading...' }) => {
+  const spinnerClass = `spinner spinner-${size}`;
+  const containerClass = `loading-container ${fullPage ? 'full-page' : ''}`;
 
   return (
-    <div className={`flex flex-col items-center justify-center p-4 ${className}`}>
-      <div 
-        className={`loading-spinner ${sizeClasses[size]} border-2 border-gray-200 border-t-primary-600`}
-      ></div>
-      {text && (
-        <p className="mt-3 text-gray-600 font-medium">{text}</p>
-      )}
+    <div className={containerClass}>
+      <div className="spinner-wrapper">
+        <div className={spinnerClass}></div>
+        {text && <p className="loading-text">{text}</p>}
+      </div>
     </div>
   );
 };

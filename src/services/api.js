@@ -1,157 +1,343 @@
 import axios from 'axios';
-import config from '../config/config';
 
-class ApiService {
-  constructor() {
-    this.instance = axios.create({
-      baseURL: config.api.baseURL,
-      timeout: config.api.timeout,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+// Base API configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_TIMEOUT = 30000; // 30 seconds
 
-    this.setupInterceptors();
-    this.initializeToken();
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
   }
+});
 
-  initializeToken() {
-    // Set initial token if available
-    const token = this.getToken();
+// Request interceptor for adding auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('mkulimasoko_token');
     if (token) {
-      this.instance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
+);
 
-  setupInterceptors() {
-    // Request interceptor
-    this.instance.interceptors.request.use(
-      (config) => {
-        const token = this.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        
-        console.log(`🔄 ${config.method?.toUpperCase()} ${config.url}`, {
-          data: config.data,
-          params: config.params
-        });
-        
-        return config;
-      },
-      (error) => {
-        console.error('❌ Request error:', error);
-        return Promise.reject(this.normalizeError(error));
-      }
-    );
-
-    // Response interceptor
-    this.instance.interceptors.response.use(
-      (response) => {
-        console.log(`✅ ${response.status} ${response.config.url}`, response.data);
-        return response;
-      },
-      (error) => {
-        const normalizedError = this.normalizeError(error);
-        console.error('❌ Response error:', normalizedError);
-        
-        // Auto logout on 401
-        if (error.response?.status === 401) {
-          this.handleUnauthorized();
-        }
-        
-        return Promise.reject(normalizedError);
-      }
-    );
-  }
-
-  normalizeError(error) {
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
     if (error.response) {
       // Server responded with error status
-      const status = error.response.status;
-      const message = error.response.data?.message || error.response.data?.error || 'Server error occurred';
+      const { status, data } = error.response;
       
-      const normalizedError = new Error(message);
-      normalizedError.status = status;
-      normalizedError.data = error.response.data;
-      
-      return normalizedError;
+      // Handle specific error codes
+      switch (status) {
+        case 401:
+          // Unauthorized - clear local storage and redirect to login
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('mkulimasoko_token');
+            localStorage.removeItem('mkulimasoko_user');
+            window.location.href = '/login?session_expired=true';
+          }
+          break;
+          
+        case 403:
+          console.error('Forbidden: You do not have permission to access this resource');
+          break;
+          
+        case 404:
+          console.error('Resource not found');
+          break;
+          
+        case 500:
+          console.error('Internal server error');
+          break;
+          
+        default:
+          console.error(`API Error: ${status}`, data);
+      }
     } else if (error.request) {
       // Request made but no response received
-      return new Error('Network error: Unable to connect to server. Please check your connection.');
+      console.error('Network error: No response received from server');
     } else {
       // Something else happened
-      return new Error(error.message || 'An unexpected error occurred');
+      console.error('API Request Error:', error.message);
     }
+    
+    return Promise.reject(error);
   }
+);
 
-  handleUnauthorized() {
-    this.clearToken();
-    // Redirect to login page if we're not already there
-    if (!window.location.pathname.includes('/login')) {
-      window.location.href = '/login';
+// Auth API endpoints
+export const authAPI = {
+  // User registration
+  register: (userData) => api.post('/auth/register', userData),
+  
+  // User login
+  login: (credentials) => api.post('/auth/login', credentials),
+  
+  // Verify token
+  verifyToken: (token) => api.post('/auth/verify', { token }),
+  
+  // Refresh token
+  refreshToken: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
+  
+  // Forgot password
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  
+  // Reset password
+  resetPassword: (token, newPassword) => api.post('/auth/reset-password', { token, newPassword }),
+  
+  // Update profile
+  updateProfile: (userId, profileData) => api.put(`/auth/profile/${userId}`, profileData),
+  
+  // Get user profile
+  getProfile: (userId) => api.get(`/auth/profile/${userId}`),
+  
+  // Upload profile picture
+  uploadProfilePicture: (userId, formData) => api.post(`/auth/profile/${userId}/picture`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
     }
-  }
+  })
+};
 
-  // Token management
-  getToken() {
-    return localStorage.getItem('mkulimasoko_token');
-  }
-
-  setToken(token) {
-    if (token) {
-      localStorage.setItem('mkulimasoko_token', token);
-      this.instance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      this.clearToken();
+// Products API endpoints
+export const productAPI = {
+  // Get all products
+  getAll: (params) => api.get('/products', { params }),
+  
+  // Get product by ID
+  getById: (id) => api.get(`/products/${id}`),
+  
+  // Get products by category
+  getByCategory: (category, params) => api.get(`/products/category/${category}`, { params }),
+  
+  // Search products
+  search: (query, params) => api.get(`/products/search/${query}`, { params }),
+  
+  // Get featured products
+  getFeatured: () => api.get('/products/featured'),
+  
+  // Get products by farmer
+  getByFarmer: (farmerId) => api.get(`/products/farmer/${farmerId}`),
+  
+  // Create new product
+  create: (productData) => api.post('/products', productData),
+  
+  // Update product
+  update: (id, productData) => api.put(`/products/${id}`, productData),
+  
+  // Delete product
+  delete: (id) => api.delete(`/products/${id}`),
+  
+  // Upload product images
+  uploadImages: (productId, formData) => api.post(`/products/${productId}/images`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
     }
-  }
+  }),
+  
+  // Get product categories
+  getCategories: () => api.get('/products/categories'),
+  
+  // Get product statistics
+  getStatistics: () => api.get('/products/statistics'),
+  
+  // Get similar products
+  getSimilar: (productId) => api.get(`/products/${productId}/similar`)
+};
 
-  clearToken() {
-    localStorage.removeItem('mkulimasoko_token');
-    delete this.instance.defaults.headers.common['Authorization'];
-  }
+// Orders API endpoints
+export const orderAPI = {
+  // Get all orders
+  getAll: (params) => api.get('/orders', { params }),
+  
+  // Get order by ID
+  getById: (id) => api.get(`/orders/${id}`),
+  
+  // Get orders by user
+  getByUser: (userId, params) => api.get(`/orders/user/${userId}`, { params }),
+  
+  // Get orders by farmer
+  getByFarmer: (farmerId, params) => api.get(`/orders/farmer/${farmerId}`, { params }),
+  
+  // Create new order
+  create: (orderData) => api.post('/orders', orderData),
+  
+  // Update order status
+  updateStatus: (id, status) => api.put(`/orders/${id}/status`, { status }),
+  
+  // Cancel order
+  cancel: (id) => api.delete(`/orders/${id}`),
+  
+  // Get order statistics
+  getStatistics: () => api.get('/orders/statistics'),
+  
+  // Get recent orders
+  getRecent: (limit = 10) => api.get(`/orders/recent/${limit}`)
+};
 
-  // HTTP methods with enhanced error handling
-  async request(config) {
-    try {
-      const response = await this.instance(config);
-      return response.data;
-    } catch (error) {
-      throw error; // Already normalized by interceptor
-    }
-  }
+// Cart API endpoints
+export const cartAPI = {
+  // Get user cart
+  getCart: () => api.get('/cart'),
+  
+  // Add item to cart
+  addToCart: (itemData) => api.post('/cart/items', itemData),
+  
+  // Update cart item
+  updateCartItem: (itemId, quantity) => api.put(`/cart/items/${itemId}`, { quantity }),
+  
+  // Remove item from cart
+  removeFromCart: (itemId) => api.delete(`/cart/items/${itemId}`),
+  
+  // Clear cart
+  clearCart: () => api.delete('/cart'),
+  
+  // Get cart count
+  getCartCount: () => api.get('/cart/count'),
+  
+  // Merge local cart with server cart
+  mergeCart: (localCart) => api.post('/cart/merge', { items: localCart })
+};
 
-  async get(url, params = {}) {
-    return this.request({ method: 'GET', url, params });
-  }
+// Farmers API endpoints
+export const farmerAPI = {
+  // Get all farmers
+  getAll: (params) => api.get('/farmers', { params }),
+  
+  // Get farmer by ID
+  getById: (id) => api.get(`/farmers/${id}`),
+  
+  // Get farmer profile
+  getProfile: (farmerId) => api.get(`/farmers/${farmerId}/profile`),
+  
+  // Update farmer profile
+  updateProfile: (farmerId, profileData) => api.put(`/farmers/${farmerId}/profile`, profileData),
+  
+  // Get farmer statistics
+  getStatistics: (farmerId) => api.get(`/farmers/${farmerId}/statistics`),
+  
+  // Get farmer reviews
+  getReviews: (farmerId, params) => api.get(`/farmers/${farmerId}/reviews`, { params }),
+  
+  // Add farmer review
+  addReview: (farmerId, reviewData) => api.post(`/farmers/${farmerId}/reviews`, reviewData),
+  
+  // Get top farmers
+  getTopFarmers: (limit = 10) => api.get(`/farmers/top/${limit}`),
+  
+  // Verify farmer
+  verifyFarmer: (farmerId) => api.post(`/farmers/${farmerId}/verify`)
+};
 
-  async post(url, data = {}) {
-    return this.request({ method: 'POST', url, data });
-  }
+// Reviews API endpoints
+export const reviewAPI = {
+  // Get product reviews
+  getProductReviews: (productId, params) => api.get(`/reviews/product/${productId}`, { params }),
+  
+  // Get farmer reviews
+  getFarmerReviews: (farmerId, params) => api.get(`/reviews/farmer/${farmerId}`, { params }),
+  
+  // Add review
+  addReview: (reviewData) => api.post('/reviews', reviewData),
+  
+  // Update review
+  updateReview: (reviewId, reviewData) => api.put(`/reviews/${reviewId}`, reviewData),
+  
+  // Delete review
+  deleteReview: (reviewId) => api.delete(`/reviews/${reviewId}`),
+  
+  // Get review statistics
+  getStatistics: (entityId, entityType) => api.get(`/reviews/statistics/${entityType}/${entityId}`)
+};
 
-  async put(url, data = {}) {
-    return this.request({ method: 'PUT', url, data });
-  }
+// Payments API endpoints
+export const paymentAPI = {
+  // Initiate payment
+  initiatePayment: (paymentData) => api.post('/payments/initiate', paymentData),
+  
+  // Verify payment
+  verifyPayment: (paymentId) => api.get(`/payments/verify/${paymentId}`),
+  
+  // Get payment methods
+  getPaymentMethods: () => api.get('/payments/methods'),
+  
+  // Get payment history
+  getPaymentHistory: (userId, params) => api.get(`/payments/history/${userId}`, { params }),
+  
+  // Process mobile payment
+  processMobilePayment: (paymentData) => api.post('/payments/mobile', paymentData)
+};
 
-  async patch(url, data = {}) {
-    return this.request({ method: 'PATCH', url, data });
-  }
+// Notifications API endpoints
+export const notificationAPI = {
+  // Get user notifications
+  getUserNotifications: (userId, params) => api.get(`/notifications/user/${userId}`, { params }),
+  
+  // Mark notification as read
+  markAsRead: (notificationId) => api.put(`/notifications/${notificationId}/read`),
+  
+  // Mark all notifications as read
+  markAllAsRead: (userId) => api.put(`/notifications/user/${userId}/read-all`),
+  
+  // Delete notification
+  deleteNotification: (notificationId) => api.delete(`/notifications/${notificationId}`),
+  
+  // Get unread count
+  getUnreadCount: (userId) => api.get(`/notifications/user/${userId}/unread-count`),
+  
+  // Create notification
+  createNotification: (notificationData) => api.post('/notifications', notificationData)
+};
 
-  async delete(url) {
-    return this.request({ method: 'DELETE', url });
-  }
+// Analytics API endpoints
+export const analyticsAPI = {
+  // Get sales analytics
+  getSalesAnalytics: (farmerId, period) => api.get(`/analytics/sales/${farmerId}`, { params: { period } }),
+  
+  // Get visitor analytics
+  getVisitorAnalytics: (period) => api.get('/analytics/visitors', { params: { period } }),
+  
+  // Get popular products
+  getPopularProducts: (limit = 10) => api.get(`/analytics/products/popular/${limit}`),
+  
+  // Get revenue analytics
+  getRevenueAnalytics: (farmerId, period) => api.get(`/analytics/revenue/${farmerId}`, { params: { period } }),
+  
+  // Get customer analytics
+  getCustomerAnalytics: (farmerId) => api.get(`/analytics/customers/${farmerId}`)
+};
 
-  // File upload helper
-  async upload(url, formData, onProgress = null) {
-    return this.request({
-      method: 'POST',
-      url,
-      data: formData,
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: onProgress
-    });
+// Utility function to handle API errors
+export const handleApiError = (error, defaultMessage = 'An error occurred') => {
+  if (error.response) {
+    return error.response.data.message || defaultMessage;
+  } else if (error.request) {
+    return 'Network error: Please check your internet connection';
+  } else {
+    return error.message || defaultMessage;
   }
-}
+};
 
-export default new ApiService();
+// Utility function to format API response
+export const formatResponse = (response) => {
+  return {
+    success: true,
+    data: response.data,
+    message: response.data.message || 'Request successful',
+    status: response.status
+  };
+};
+
+// Export the axios instance for custom requests
+export default api;
