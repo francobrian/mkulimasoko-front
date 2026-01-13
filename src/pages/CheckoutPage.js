@@ -4,6 +4,8 @@ import { Helmet } from 'react-helmet-async';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { FaMapMarkerAlt, FaCreditCard, FaTruck, FaLock, FaCheckCircle } from 'react-icons/fa';
+import OrderService from '../services/orderService';
+import PaymentService from '../services/paymentService';
 import './CheckoutPage.css';
 
 const CheckoutPage = () => {
@@ -116,27 +118,67 @@ const CheckoutPage = () => {
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Prepare order data
+      const orderData = {
+        items: cartItems.map(item => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        shippingAddress: {
+          fullName: shippingInfo.fullName,
+          phone: shippingInfo.phone,
+          email: shippingInfo.email,
+          address: shippingInfo.address,
+          city: shippingInfo.city,
+          county: shippingInfo.county,
+          deliveryNotes: shippingInfo.deliveryNotes
+        },
+        paymentMethod: paymentInfo.method,
+        subtotal: calculateSubtotal(),
+        shippingCost: calculateShippingCost(),
+        total: calculateTotal()
+      };
+
+      // Create the order
+      const orderResult = await OrderService.createOrder(orderData);
       
-      const orderNumber = `ORD-${Date.now().toString().slice(-8)}`;
-      const orderTotal = calculateTotalWithShipping();
-      
+      if (!orderResult.success) {
+        throw new Error(orderResult.error);
+      }
+
+      const order = orderResult.data;
+
+      // Process payment if needed
+      if (paymentInfo.method === 'mpesa') {
+        const paymentData = {
+          orderId: order.id,
+          amount: order.total,
+          phoneNumber: paymentInfo.mpesaNumber,
+          method: 'mpesa'
+        };
+
+        const paymentResult = await PaymentService.processMobilePayment(paymentData);
+        
+        if (!paymentResult.success) {
+          throw new Error(paymentResult.error);
+        }
+      }
+
+      // Set order details for confirmation
       setOrderDetails({
-        orderNumber,
-        total: orderTotal,
+        orderNumber: order.orderNumber || order.id,
+        total: order.total,
         shippingAddress: shippingInfo.address,
         paymentMethod: paymentInfo.method,
-        estimatedDelivery: '3-5 business days'
+        estimatedDelivery: order.estimatedDelivery || '3-5 business days'
       });
       
       setOrderPlaced(true);
       clearCart();
       
-      // In real app, you would save the order to the database
-      
     } catch (error) {
-      alert('Failed to place order. Please try again.');
+      alert(`Failed to place order: ${error.message}`);
     } finally {
       setLoading(false);
     }

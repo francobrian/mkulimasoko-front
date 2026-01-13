@@ -318,6 +318,54 @@ export const analyticsAPI = {
   getCustomerAnalytics: (farmerId) => api.get(`/analytics/customers/${farmerId}`)
 };
 
+// Market Updates API endpoints
+export const marketAPI = {
+  // Get market prices
+  getPrices: (params) => api.get('/market/prices', { params }),
+  
+  // Get market trends
+  getTrends: (commodity, period) => api.get(`/market/trends/${commodity}`, { params: { period } }),
+  
+  // Get market news
+  getNews: (params) => api.get('/market/news', { params }),
+  
+  // Get commodity prices by location
+  getPricesByLocation: (location, params) => api.get(`/market/prices/location/${location}`, { params }),
+  
+  // Get market statistics
+  getStatistics: () => api.get('/market/statistics'),
+  
+  // Subscribe to market alerts
+  subscribeAlerts: (alertData) => api.post('/market/alerts/subscribe', alertData),
+  
+  // Unsubscribe from market alerts
+  unsubscribeAlerts: (alertId) => api.delete(`/market/alerts/${alertId}`)
+};
+
+// Weather API endpoints
+export const weatherAPI = {
+  // Get current weather
+  getCurrent: (location) => api.get(`/weather/current/${location}`),
+  
+  // Get weather forecast
+  getForecast: (location, days = 7) => api.get(`/weather/forecast/${location}`, { params: { days } }),
+  
+  // Get weather alerts
+  getAlerts: (location) => api.get(`/weather/alerts/${location}`),
+  
+  // Get agricultural weather advice
+  getAgriAdvice: (location) => api.get(`/weather/agri-advice/${location}`),
+  
+  // Get weather history
+  getHistory: (location, days = 30) => api.get(`/weather/history/${location}`, { params: { days } }),
+  
+  // Subscribe to weather alerts
+  subscribeAlerts: (alertData) => api.post('/weather/alerts/subscribe', alertData),
+  
+  // Unsubscribe from weather alerts
+  unsubscribeAlerts: (alertId) => api.delete(`/weather/alerts/${alertId}`)
+};
+
 // Utility function to handle API errors
 export const handleApiError = (error, defaultMessage = 'An error occurred') => {
   if (error.response) {

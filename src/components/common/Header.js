@@ -126,6 +126,8 @@ const Header = () => {
               </div>
             </li>
             <li><Link to="/products">All Products</Link></li>
+            <li><Link to="/market">Market Updates</Link></li>
+            <li><Link to="/weather">Weather</Link></li>
             <li><Link to="/farmers">Farmers</Link></li>
             <li><Link to="/about">About Us</Link></li>
             <li><Link to="/contact">Contact</Link></li>

@@ -28,6 +28,8 @@ import OrdersPage from './pages/OrdersPage';
 import ProfilePage from './pages/ProfilePage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import MarketPage from './pages/MarketPage';
+import WeatherPage from './pages/WeatherPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Protected Route Component
@@ -70,6 +72,8 @@ function App() {
                     <Route path="/products" element={<ProductsPage />} />
                     <Route path="/products/:category" element={<ProductsPage />} />
                     <Route path="/product/:id" element={<ProductDetailsPage />} />
+                    <Route path="/market" element={<MarketPage />} />
+                    <Route path="/weather" element={<WeatherPage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/contact" element={<ContactPage />} />
 
